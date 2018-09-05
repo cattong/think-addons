@@ -2,7 +2,7 @@
 The ThinkPHP 5.1.x Addons Package
 
 ## 安装
-> composer require cattong/think-addons:dev-master
+> composer require cattong/think-addons
 
 ## 配置
 ### 公共配置
