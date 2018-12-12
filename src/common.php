@@ -84,7 +84,9 @@ Hook::add('app_init', function () {
 
         //方法2：从数据库读取hooks配置*************************
         if (strtolower($config['type']) == 'db') {
-            $hooks = db('hooks')->field('name,addons')->select();
+            $HooksModel = new \app\common\model\HooksModel();
+            $AddonsModel = new \app\common\model\AddonsModel();
+            $hooks = $HooksModel->where('status', 1)->field('name,addons')->select();
             // 获取钩子的实现插件信息
             foreach ($hooks as $row) {
                 $key = $row['name'];
@@ -94,7 +96,7 @@ Hook::add('app_init', function () {
                     $map[] = ['status', '=', 1];
                     $names = explode(',', $value);
                     $map[] = ['name', 'IN', $names];
-                    $data = db('addons')->where($map)->column('name');
+                    $data = $AddonsModel->where($map)->column('name');
                     if ($data) {
                         $addons = array_intersect($names, $data);
                         $config['hooks'][$key] = $addons;
@@ -144,7 +146,7 @@ function hook($hook, $params = [])
 {
     $data = Cache::get('hooks', []);
     if (!isset($data[$hook])) {
-        echo 'hook:' . $hook . ' not exist';
+        echo '<script>console.warn("hook:' . $hook . ' not exist");</script>';
         return;
     }
 
