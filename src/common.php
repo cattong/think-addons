@@ -21,18 +21,18 @@ use think\facade\Env;
 //define('ADDON_PATH', \think\facade\Env::get('root_path') . 'addons' . DIRECTORY_SEPARATOR);
 
 // 定义路由
-Route::get('addons/execute/[:addon]-[:controller]-[:action]', "\\think\\addons\\Route@execute");
+Route::get('addons/[:addon]/[:controller]/[:action]', "\\think\\addons\\Route@execute");
 
 // 闭包自动识别插件目录配置
 Hook::add('app_init', function () {
 
-    Env::set('addon_path', Env::get('root_path') . 'addons' . DIRECTORY_SEPARATOR);
+    Env::set('addons_path', Env::get('root_path') . 'addons' . DIRECTORY_SEPARATOR);
 
     // 注册类的根命名空间
-    Loader::addNamespace('addons', Env::get('addon_path'));
+    Loader::addNamespace('addons', Env::get('addons_path'));
     // 如果插件目录不存在则创建
-    if (!is_dir(Env::get('addon_path'))) {
-        @mkdir(Env::get('addon_path'), 0777, true);
+    if (!is_dir(Env::get('addons_path'))) {
+        @mkdir(Env::get('addons_path'), 0777, true);
     }
 
     // 获取开关
@@ -52,7 +52,7 @@ Hook::add('app_init', function () {
             $base = get_class_methods("\\think\\Addons");
 
             // 读取插件目录中的php文件
-            foreach (glob(Env::get('addon_path') . '*/*.php') as $addons_file) {
+            foreach (glob(Env::get('addons_path') . '*/*.php') as $addons_file) {
                 // 格式化路径信息
                 $info = pathinfo($addons_file);
                 // 获取插件目录名
@@ -127,7 +127,7 @@ Hook::add('action_begin', function () {
             } else {
                 $values = (array)$values;
             }
-            $addons[$key] = array_filter(array_map('get_addon_class', $values));//获取插件类
+            $addons[$key] = array_filter(array_map('get_addons_class', $values));//获取插件类
             Hook::add($key, $addons[$key]);//key为钩子名称，值为具体的插件类,如\addons\test\Test,默认优先执行插件类的:key方法，如果方法不存在，执行插件类:run方法
         }
         Cache::set('hooks', $addons);
@@ -160,7 +160,7 @@ function hook($hook, $params = [])
  * @param string $class 当前类名
  * @return string
  */
-function get_addon_class($name, $type = 'hook', $class = null)
+function get_addons_class($name, $type = 'hook', $class = null)
 {
     $name = Loader::parseName($name);
     // 处理多级控制器情况
@@ -175,12 +175,13 @@ function get_addon_class($name, $type = 'hook', $class = null)
     }
     switch ($type) {
         case 'hook':
-            $namespace = "\\addons\\" . $name . "\\" . $class . 'Addons';
+            $namespace = "\\addons\\" . $name . "\\" . $class;
+            break;
         case 'controller':
             $namespace = "\\addons\\" . $name . "\\controller\\" . $class;
             break;
         default:
-            $namespace = "\\addons\\" . $name . "\\" . $class . 'Addons';;
+            $namespace = "\\addons\\" . $name . "\\" . $class;;
     }
 
     return class_exists($namespace) ? $namespace : '';
@@ -191,9 +192,9 @@ function get_addon_class($name, $type = 'hook', $class = null)
  * @param string $name 插件名
  * @return array
  */
-function get_addon_config($name)
+function get_addons_config($name)
 {
-    $class = get_addon_class($name);
+    $class = get_addons_class($name);
     if (class_exists($class)) {
         $addon = new $class();
         return $addon->getConfig();
@@ -210,7 +211,7 @@ function get_addon_config($name)
  * @param bool|string $suffix 生成的URL后缀
  * @param bool|string $domain 域名
  */
-function addon_url($url, $param = [], $suffix = true, $domain = false)
+function addons_url($url, $param = [], $suffix = true, $domain = false)
 {
     $url = parse_url($url);
     $case = config('url_convert');

@@ -37,7 +37,7 @@ class Route extends \think\Controller
 
         if (!empty($addon) && !empty($controller) && !empty($action)) {
             // 获取类的命名空间
-            $class = get_addon_class($addon, 'controller', $controller);
+            $class = get_addons_class($addon, 'controller', $controller);
             if (class_exists($class)) {
                 $model = new $class();
                 if ($model === false) {

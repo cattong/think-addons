@@ -16,11 +16,20 @@ use think\Db;
 /**
  * 插件基类
  * Class Addons
- * @author Byron Sampson <xiaobo.sun@qq.com>
+ * @author Beyongx
  * @package think\addons
  */
 abstract class Addons
 {
+    const STATUS_DELETED = -1; //已删除
+    const STATUS_UNKNOWN = 0;  //未知状态
+    const STATUS_DOWNLOADING = 1;  //下载中
+    const STATUS_DOWNLOADED = 2; //已下载
+    const STATE_INSTALLING = 3; //安装中
+    const STATE_INSTALLED = 4; //已安装
+    const STATE_UNINSTALLING = 5; //卸载中
+    const STATE_UNINSTALLIED = 6; //已卸载
+
     /**
      * 视图实例对象
      * @var view
@@ -32,7 +41,7 @@ abstract class Addons
     protected $error;
 
     /**
-     * $info = [
+     * $config = [
      *  'name'          => 'Test',
      *  'title'         => '测试插件',
      *  'description'   => '用于thinkphp5的插件扩展演示',
@@ -41,7 +50,8 @@ abstract class Addons
      *  'version'       => '0.1'
      * ]
      */
-    public $info = [];
+    public $config = [];
+
     public $addons_path = '';
     public $config_file = '';
 
@@ -52,7 +62,7 @@ abstract class Addons
     public function __construct()
     {
         // 获取当前插件目录
-        $this->addons_path = \think\facade\Env::get('addon_path') . $this->getName() . DIRECTORY_SEPARATOR;
+        $this->addons_path = \think\facade\Env::get('addons_path') . $this->getName() . DIRECTORY_SEPARATOR;
         // 读取当前插件配置信息
         if (is_file($this->addons_path . 'config.php')) {
             $this->config_file = $this->addons_path . 'config.php';
@@ -65,8 +75,8 @@ abstract class Addons
         $this->view = Container::get('view')->init($config);
 
         // 控制器初始化
-        if (method_exists($this, '_initialize')) {
-            $this->_initialize();
+        if (method_exists($this, 'initialize')) {
+            $this->initialize();
         }
     }
 
@@ -121,11 +131,11 @@ abstract class Addons
      * 检查配置信息是否完整
      * @return bool
      */
-    final public function checkInfo()
+    final public function checkConfig()
     {
-        $info_check_keys = ['name', 'title', 'description', 'status', 'author', 'version'];
-        foreach ($info_check_keys as $value) {
-            if (!array_key_exists($value, $this->info)) {
+        $configCheckKeys = ['name', 'title', 'description', 'status', 'author', 'version'];
+        foreach ($configCheckKeys as $value) {
+            if (!array_key_exists($value, $this->config)) {
                 return false;
             }
         }
@@ -210,28 +220,27 @@ abstract class Addons
     public function run($param)
     {
         echo 'execute run method, maybe hook method not exists.';
-        cache('addons', null);
-        cache('hooks', null);
+        //cache('addons', null);
+        //cache('hooks', null);
     }
 
     /**
      * 判断是否插件已经安装
      * @return bool
      */
-    public function isinstall()
+    public function getStatus()
     {
-        $name = $info['name'];
+        $name = $this->config['name'];
         $where = [
-            ['name', '=', $name],
-            ['status', '=', 1]
+            ['name', '=', $name]
         ];
 
         $addon = db('addons')->where($where)->find();
         if ($addon) {
-            return true;
+            return $addon['status'];
         }
 
-        return false;
+        return self::STATUS_UNKNOWN;
     }
 
     /**

@@ -1,5 +1,5 @@
 # think-addons
-The ThinkPHP 5.1.x Addons Package
+基于ThinkPHP5.1的插件框架。The ThinkPHP 5.1.x Addons Package
 
 ## 安装
 > composer require cattong/think-addons
@@ -143,7 +143,7 @@ test为插件名，Action为controller中的类名，link为controller中的方�
 <?php
 namespace addons\test\controller;
 
-class Action
+class Index
 {
     public function link()
     {
@@ -160,11 +160,11 @@ namespace addons\test\controller;
 
 use think\addons\Controller;
 
-class Action extends Controller
+class Index extends Controller
 {
     public function link()
     {
-        return $this->fetch();
+        return $this->fetch('index/link');
     }
 }
 ```
@@ -194,9 +194,9 @@ tp5
  - addons
  -- test
  --- controller
- ---- Action.php
+ ---- Index.php
  --- view
- ---- action
+ ---- index
  ----- link.html
  --- config.php
  --- info.html

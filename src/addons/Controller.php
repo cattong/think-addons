@@ -66,7 +66,7 @@ class Controller extends \think\Controller
 
         $view_path = $this->config['view_path'] ?: 'view';
         // 重置配置
-        Config::set('template.view_path', Env::get('addon_path') . $this->addon . DIRECTORY_SEPARATOR . $view_path . DIRECTORY_SEPARATOR);
+        Config::set('template.view_path', Env::get('addons_path') . $this->addon . DIRECTORY_SEPARATOR . $view_path . DIRECTORY_SEPARATOR);
 
         parent::__construct();
     }

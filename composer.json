@@ -1,12 +1,18 @@
 {
     "name": "cattong/think-addons",
     "description": "addons package for thinkphp5.1.x",
+    "keywords": [
+        "addons",
+        "plugin",
+        "thinkphp5",
+        "framework"
+    ],
     "homepage": "https://github.com/cattong/think-addons",
     "license": "Apache-2.0",
     "minimum-stability": "dev",
     "authors": [
         {
-            "name": "miniappcms",
+            "name": "beyongx.com",
             "email": "aronter@gmail.com"
         }
     ],
