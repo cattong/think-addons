@@ -44,74 +44,73 @@ Hook::add('app_init', function () {
     // 当debug时不缓存配置
     $config = \think\facade\Config::get('app_debug') ? [] : Cache::get('addons', []);
     if (empty($config)) {
-        return;
-    }
+        $config = (array)Config::get('addons.');
 
-    $config = (array)Config::get('addons.');
+        // 方法1：从文件读取addons的配置************************
+        if (strtolower($config['type']) == 'file') {
+            // 读取插件目录及钩子列表
+            $base = get_class_methods("\\think\\Addons");
 
-    // 方法1：从文件读取addons的配置************************
-    if (strtolower($config['type']) == 'file') {
-        // 读取插件目录及钩子列表
-        $base = get_class_methods("\\think\\Addons");
-
-        // 读取插件目录中的php文件
-        foreach (glob(Env::get('addon_path') . '*/*.php') as $addons_file) {
-            // 格式化路径信息
-            $info = pathinfo($addons_file);
-            // 获取插件目录名
-            $name = pathinfo($info['dirname'], PATHINFO_FILENAME);
-            // 找到插件入口文件
-            if (strtolower($info['filename']) == strtolower($name)) {
-                // 读取出所有公共方法
-                $methods = (array)get_class_methods("\\addons\\" . $name . "\\" . $info['filename']);
-                // 跟插件基类方法做比对，得到差异结果
-                $hooks = array_diff($methods, $base);
-                // 循环将钩子方法写入配置中
-                foreach ($hooks as $hook) {
-                    if (!isset($config['hooks'][$hook])) {
-                        $config['hooks'][$hook] = [];
-                    }
-                    // 兼容手动配置项
-                    if (is_string($config['hooks'][$hook])) {
-                        $config['hooks'][$hook] = explode(',', $config['hooks'][$hook]);
-                    }
-                    if (!in_array($name, $config['hooks'][$hook])) {
-                        $config['hooks'][$hook][] = $name;
+            // 读取插件目录中的php文件
+            foreach (glob(Env::get('addon_path') . '*/*.php') as $addons_file) {
+                // 格式化路径信息
+                $info = pathinfo($addons_file);
+                // 获取插件目录名
+                $name = pathinfo($info['dirname'], PATHINFO_FILENAME);
+                // 找到插件入口文件
+                if (strtolower($info['filename']) == strtolower($name)) {
+                    // 读取出所有公共方法
+                    $methods = (array)get_class_methods("\\addons\\" . $name . "\\" . $info['filename']);
+                    // 跟插件基类方法做比对，得到差异结果
+                    $hooks = array_diff($methods, $base);
+                    // 循环将钩子方法写入配置中
+                    foreach ($hooks as $hook) {
+                        if (!isset($config['hooks'][$hook])) {
+                            $config['hooks'][$hook] = [];
+                        }
+                        // 兼容手动配置项
+                        if (is_string($config['hooks'][$hook])) {
+                            $config['hooks'][$hook] = explode(',', $config['hooks'][$hook]);
+                        }
+                        if (!in_array($name, $config['hooks'][$hook])) {
+                            $config['hooks'][$hook][] = $name;
+                        }
                     }
                 }
             }
         }
-    }
-    //方法1 end *********************************
-    //dump($config);
+        //方法1 end *********************************
+        //dump($config);
 
-    //方法2：从数据库读取hooks配置, 如果数据库未配置则不读取*************************
-    if (strtolower($config['type']) == 'db' && !empty(Config::get('database.database'))) {
-        $HooksModel = new \app\common\model\HooksModel();
-        $AddonsModel = new \app\common\model\AddonsModel();
-        $hooks = $HooksModel->where('status', 1)->field('name,addons')->select();
-        // 获取钩子的实现插件信息
-        foreach ($hooks as $row) {
-            $key = $row['name'];
-            $value = $row['addons'];
-            if ($value) {
-                $map = [];
-                $map[] = ['status', '=', 1];
-                $names = explode(',', $value);
-                $map[] = ['name', 'in', $names];
-                $data = $AddonsModel->where($map)->column('name');
-                if ($data) {
-                    $addons = array_intersect($names, $data);
-                    $config['hooks'][$key] = $addons;
+        //方法2：从数据库读取hooks配置*************************
+        if (strtolower($config['type']) == 'db') {
+            $HooksModel = new \app\common\model\HooksModel();
+            $AddonsModel = new \app\common\model\AddonsModel();
+            $hooks = $HooksModel->where('status', 1)->field('name,addons')->select();
+            // 获取钩子的实现插件信息
+            foreach ($hooks as $row) {
+                $key = $row['name'];
+                $value = $row['addons'];
+                if ($value) {
+                    $map = [];
+                    $map[] = ['status', '=', 1];
+                    $names = explode(',', $value);
+                    $map[] = ['name', 'IN', $names];
+                    $data = $AddonsModel->where($map)->column('name');
+                    if ($data) {
+                        $addons = array_intersect($names, $data);
+                        $config['hooks'][$key] = $addons;
+                    }
                 }
             }
         }
+        //方法2 end *********************************
+        //dump($config);
+
+        Cache::set('addons', $config);
     }
-    //方法2 end *********************************
-    //dump($config);
 
-    Cache::set('addons', $config);
-
+//    Config::set('addons', $config);
 });
 
 // 闭包初始化行为
@@ -175,11 +174,13 @@ function get_addon_class($name, $type = 'hook', $class = null)
         $class = Loader::parseName(is_null($class) ? $name : $class, 1);
     }
     switch ($type) {
+        case 'hook':
+            $namespace = "\\addons\\" . $name . "\\" . $class . 'Addons';
         case 'controller':
             $namespace = "\\addons\\" . $name . "\\controller\\" . $class;
             break;
         default:
-            $namespace = "\\addons\\" . $name . "\\" . $class;
+            $namespace = "\\addons\\" . $name . "\\" . $class . 'Addons';;
     }
 
     return class_exists($namespace) ? $namespace : '';
