@@ -83,7 +83,7 @@ Hook::add('app_init', function () {
         //dump($config);
 
         //方法2：从数据库读取hooks配置*************************
-        if (strtolower($config['type']) == 'db') {
+        if (strtolower($config['type']) == 'db' && !empty(Config::get('database.database'))) {
             $HooksModel = new \app\common\model\HooksModel();
             $AddonsModel = new \app\common\model\AddonsModel();
             $hooks = $HooksModel->where('status', 1)->field('name,addons')->select();
