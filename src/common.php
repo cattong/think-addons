@@ -42,7 +42,7 @@ Hook::add('app_init', function () {
         return;
     }
     // 当debug时不缓存配置
-    $config = \think\facade\Config::get('app_debug') ? [] : Cache::get('addons', []);
+    $config = \think\facade\Config::get('app_debug') ? [] : Cache::get('addons', [], "app_");
     if (empty($config)) {
         $config = (array)Config::get('addons.');
 
@@ -107,7 +107,7 @@ Hook::add('app_init', function () {
         //方法2 end *********************************
         //dump($config);
 
-        Cache::set('addons', $config);
+        Cache::set('addons', $config, ["prefix" => "app_"]);
     }
 
 //    Config::set('addons', $config);
@@ -116,8 +116,8 @@ Hook::add('app_init', function () {
 // 闭包初始化行为
 Hook::add('action_begin', function () {
     // 获取系统配置
-    $data = \think\facade\Config::get('app_debug') ? [] : Cache::get('hooks', []);
-    $addons = (array)Cache::get('addons');
+    $data = \think\facade\Config::get('app_debug') ? [] : Cache::get('hooks', [], "app_");
+    $addons = (array)Cache::get('addons', "app_");
     $addons = $addons['hooks'];
     if (empty($data)) {
         // 初始化钩子
@@ -130,7 +130,7 @@ Hook::add('action_begin', function () {
             $addons[$key] = array_filter(array_map('get_addons_class', $values));//获取插件类
             Hook::add($key, $addons[$key]);//key为钩子名称，值为具体的插件类,如\addons\test\Test,默认优先执行插件类的:key方法，如果方法不存在，执行插件类:run方法
         }
-        Cache::set('hooks', $addons);
+        Cache::set('hooks', $addons, ["prefix" => "app_"]);
     } else {
         Hook::import($data, false);
     }
@@ -144,7 +144,7 @@ Hook::add('action_begin', function () {
  */
 function hook($hook, $params = [])
 {
-    $data = Cache::get('hooks', []);
+    $data = Cache::get('hooks', [], "app_");
     if (!isset($data[$hook])) {
         echo '<script>console.warn("hook:' . $hook . ' not exist");</script>';
         return;
