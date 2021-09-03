@@ -9,11 +9,11 @@
 // | Author: Byron Sampson <xiaobo.sun@qq.com>
 // +----------------------------------------------------------------------
 
-use think\App;
+use think\Cache;
 use think\facade\Hook;
 use think\facade\Config;
 use think\Loader;
-use think\facade\Cache;
+#use think\facade\Cache;
 use think\facade\Route;
 use think\facade\Env;
 
@@ -23,8 +23,17 @@ use think\facade\Env;
 // 定义路由
 Route::get('addons/[:addon]/[:controller]/[:action]', "\\think\\addons\\Route@execute");
 
+//hack Cache无法指定前缀的问题，app_init action_begin直接使用Cache，
+//实例模块的Cache.prefix可能与全局的Cache.prefix不一样
+global $AddonsCache;
+$addonsCacheConfig = Config::get("cache.");
+$addonsCacheConfig["prefix"] = "app_";
+$addonsCacheInstance = new Cache($addonsCacheConfig);
+$AddonsCache = $addonsCacheInstance->store();
+
 // 闭包自动识别插件目录配置
 Hook::add('app_init', function () {
+    global $AddonsCache;
 
     Env::set('addons_path', Env::get('root_path') . 'addons' . DIRECTORY_SEPARATOR);
 
@@ -42,7 +51,7 @@ Hook::add('app_init', function () {
         return;
     }
     // 当debug时不缓存配置
-    $config = \think\facade\Config::get('app_debug') ? [] : Cache::get('addons', [], "app_");
+    $config = \think\facade\Config::get('app_debug') ? [] : $AddonsCache->get('addons', []);
     if (empty($config)) {
         $config = (array)Config::get('addons.');
 
@@ -107,7 +116,7 @@ Hook::add('app_init', function () {
         //方法2 end *********************************
         //dump($config);
 
-        Cache::set('addons', $config, ["prefix" => "app_"]);
+        $AddonsCache->set('addons', $config);
     }
 
 //    Config::set('addons', $config);
@@ -115,9 +124,11 @@ Hook::add('app_init', function () {
 
 // 闭包初始化行为
 Hook::add('action_begin', function () {
+    global $AddonsCache;
+
     // 获取系统配置
-    $data = \think\facade\Config::get('app_debug') ? [] : Cache::get('hooks', [], "app_");
-    $addons = (array)Cache::get('addons', "app_");
+    $data = \think\facade\Config::get('app_debug') ? [] : $AddonsCache->get('hooks', []);
+    $addons = (array)$AddonsCache->get('addons');
     $addons = $addons['hooks'];
     if (empty($data)) {
         // 初始化钩子
@@ -130,7 +141,7 @@ Hook::add('action_begin', function () {
             $addons[$key] = array_filter(array_map('get_addons_class', $values));//获取插件类
             Hook::add($key, $addons[$key]);//key为钩子名称，值为具体的插件类,如\addons\test\Test,默认优先执行插件类的:key方法，如果方法不存在，执行插件类:run方法
         }
-        Cache::set('hooks', $addons, ["prefix" => "app_"]);
+        $AddonsCache->set('hooks', $addons);
     } else {
         Hook::import($data, false);
     }
@@ -144,7 +155,9 @@ Hook::add('action_begin', function () {
  */
 function hook($hook, $params = [])
 {
-    $data = Cache::get('hooks', [], "app_");
+    global $AddonsCache;
+
+    $data = $AddonsCache->get('app_hooks', []);
     if (!isset($data[$hook])) {
         echo '<script>console.warn("hook:' . $hook . ' not exist");</script>';
         return;
