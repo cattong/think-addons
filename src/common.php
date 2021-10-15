@@ -157,7 +157,7 @@ function hook($hook, $params = [])
 {
     global $AddonsCache;
 
-    $data = $AddonsCache->get('app_hooks', []);
+    $data = $AddonsCache->get('hooks', []);
     if (!isset($data[$hook])) {
         echo '<script>console.warn("hook:' . $hook . ' not exist");</script>';
         return;
